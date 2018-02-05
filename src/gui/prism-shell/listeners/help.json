@@ -1,0 +1,10 @@
+Listener Options:
+
+Commands                            Description
+--------                            -----------
+help                                Displays this help information
+info                                Display help information for a specified module
+sessions                            List active sessions
+listeners                           List active listeners
+stagers                             List active stagers
+implants                            List available implants

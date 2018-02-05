@@ -1,0 +1,25 @@
+{
+  "Description": "Available listeners for configuration",
+  "listeners": {
+    "http": {
+      "browserhook": {
+        "Description": "Starts a listener that injects Griffindor into the HTTP GET responses",
+        "Host": ["True", "", "Hostname/IP Address for staging."],
+        "Name": ["True", "", "Name for Listener."],
+        "Port": ["True", "", "Port for the Listener."]
+      },
+      "http": {
+        "Description": "Starts a http[s] listener",
+        "Host": ["True", "", "Hostname/IP Address for staging."],
+        "Name": ["True", "", "Name for Listener."],
+        "Port": ["True", "", "Port for the Listener."]
+      },
+      "httpforeign": {
+        "Description": "Starts a foreign http[s] listener ",
+        "Host": ["True", "", "Hostname/IP Address for staging."],
+        "Name": ["True", "", "Name for Listener."],
+        "Port": ["True", "", "Port for the Listener."]
+      }
+    }
+  }
+}

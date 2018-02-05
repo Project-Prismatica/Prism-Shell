@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js" onload="window.$ = window.jQuery = module.exports;"></script>
+    <script src="public/js/jquery.mousewheel-min.js"></script>
+    <script src="public/js/jquery.terminal.min.js"></script>
+    <link href="public/css/jquery.terminal.min.css" rel="stylesheet"/>
+    <!--<link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/1.9.0/css/jquery.terminal.min.css" rel="stylesheet"/>-->
+
+    <meta charset="UTF-8">
+    <title>Prismatica</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--HTML Settings Container-->
+    <div style="dsiplay:none">
+      <span id="menustring"></span>
+      <span id="menuconfig">{"Host": "", "Name": "", "Port": ""}</span>
+    </div>
+    <script src="public/bundle.js"></script>
+<!--LISTENER Commands-->
+<script>
+    function invokeListener() {
+      var menuConfig = document.getElementById("menuconfig").innerHTML;
+
+      var listener = document.getElementById("menustring").innerHTML;
+      $.post("http://localhost:8010/invoke/listener", JSON.parse(menuConfig)).then(function(response) {
+          setTimeout(function(){term.echo(response)}, 100);
+      });
+      console.log(menuConfig);
+    }
+    function configListener(command) {
+      var ret = "";
+      //Listener Config
+
+
+      //Command Switch
+      if (command == "help" || command == "info") {
+        $.post("prism-shell/listeners/help.json", {"a": "command"}).then(function(response) {
+            setTimeout(function(){term.echo(response)}, 10);
+        });
+      } else if (command == "execute" || command == "exploit" || command == "run") {
+        invokeListener();
+      }
+      //Use listener
+      else if (command.startsWith('use')) {
+        var result = command.slice(4);
+        if (result != undefined) {
+            document.getElementById("menustring").innerHTML = result;
+        }
+      } else if (command.startsWith("set")) {
+        var result = command.slice(4);
+        if (result != undefined) {
+            var settings = JSON.parse(document.getElementById("menuconfig").innerHTML);
+            settings[result.split(" ")[0]] = result.split(" ")[1];
+            document.getElementById("menuconfig").innerHTML = JSON.stringify(settings);
+        }
+      } else if (command.startsWith('show')) {
+        var result = command.slice(5);
+          if (result != undefined) {
+            if (result == "listeners") {
+              $.post("prism-shell/listeners/listeners.json", {"a": "command"}).then(function(response) {
+                  setTimeout(function(){term.echo(response)}, 10);
+              });
+            } else if (result == "options") {
+              var curSettings = JSON.parse(document.getElementById("menuconfig").innerHTML);
+              //for (a in curSettings) {
+              //  term.echo(JSON.parse(document.getElementById("menuconfig").innerHTML)[a]);
+              //}
+              term.echo("Listener Options:");
+              term.echo("=================");
+              term.echo("");
+              term.echo("Name " + curSettings.Name);
+              term.echo("Host " + curSettings.Host);
+              term.echo("Port " + curSettings.Port);
+              term.echo("=================");
+            } else {
+              $.post("prism-shell/listeners/" + result + '.json', {"a": "command"}).then(function(response) {
+                  setTimeout(function(){term.echo(response)}, 10);
+              });
+            }
+          }
+      } else {
+        $.post("prism-shell/listeners/" + command + '.json', {"a": "command"}).then(function(response) {
+            setTimeout(function(){term.echo(response)}, 10);
+        });
+      }
+      console.log(ret);
+      return ret;
+    }
+
+    function prompter (cmd) {
+      if (cmd == "PRISM" || cmd == "Prism" || cmd == "prism" || cmd == "exit" || cmd == "back") {
+        setPrompt("PRISM>");
+      } else if (cmd == "Shell" || cmd == "shell") {
+        setPrompt("C:\\>");
+      } else if (cmd == "Listeners" || cmd == "listeners") {
+        setPrompt("Listeners>");
+      }
+    }
+
+    function newTerminal() {
+      console.log("test");
+    }
+
+    function getPrompt() {
+      return document.getElementsByClassName("prompt")[0].innerHTML;
+    }
+    function setPrompt(prompt) {
+      document.getElementsByClassName("prompt")[0].innerHTML = '<span>' + prompt + '</span>';
+    }
+    function adjustPrompt(command) {
+      var prompt = getPrompt();
+      var op = 0;
+      if (document.getElementsByClassName("command")[0]) {
+        document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML = '<div style="width: 100%;">' + prompt.slice(0,-7) + command + '</span></div>';
+
+        //if (document.getElementsByClassName("command").length > 0) {
+        //  document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML = '';
+        //}
+
+        //console.log(prompt.slice(0,-7) );
+        //console.log(document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML.slice(26+document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML.length));
+        //console.log(document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML);
+      }
+    }
+    var ul;
+    var cmd;
+    var empty = {
+        options: [],
+        args: []
+    };
+    var commands = {
+        'get-command': {
+            options: ['name', 'age', 'description', 'address'],
+            args: ['clear']
+        },
+        'git': {
+            args: ['commit', 'push', 'pull'],
+            options: ['amend', 'hard', 'version', 'help']
+        },
+        'listeners': empty,
+        'get-age': empty,
+        'get-money': empty
+    };
+    var term = $('.term_container').terminal($.noop, {
+    onInit: function(term) {
+        var wrapper = term.cmd().find('.cursor').wrap('<span/>').parent()
+            .addClass('cmd-wrapper');
+        ul = $('<ul></ul>').appendTo(wrapper);
+        ul.on('click', 'li', function() {
+            term.insert($(this).text());
+            ul.empty();
+        });
+    },
+    keydown: function(e) {
+        var term = this;
+        // setTimeout because terminal is adding characters in keypress
+        // we use keydown because we need to prevent default action for
+        // tab and still execute custom code
+        setTimeout(function() {
+            ul.empty();
+            var command = term.get_command();
+            var name = command.match(/^([^\s]*)/)[0];
+            if (name) {
+                var word = term.before_cursor(true);
+                var regex = new RegExp('^' + $.terminal.escape_regex(word));
+                var list;
+                if (name == word) {
+                    list = Object.keys(commands);
+                } else if (command.match(/\s/)) {
+                    if (commands[name]) {
+                        if (word.match(/^--/)) {
+                            list = commands[name].options.map(function(option) {
+                                return '--' + option;
+                            });
+                        } else {
+                            list = commands[name].args;
+                        }
+                    }
+                }
+                if (word.length >= 2 && list) {
+                    var matched = [];
+                    for (var i=list.length; i--;) {
+                        if (regex.test(list[i])) {
+                            matched.push(list[i]);
+                        }
+                    }
+                    var insert = false;
+                    if (e.which == 9) {
+                        insert = term.complete(matched);
+                    }
+                    if (matched.length && !insert) {
+                        ul.hide();
+                        for (var i=0; i<matched.length; ++i) {
+                            var str = matched[i].replace(regex, '');
+                            $('<li>' + str + '</li>').appendTo(ul);
+                        }
+                        ul.show();
+                    }
+                }
+            }
+
+        }, 0);
+        if (e.which == 9) {
+            return false;
+        }
+    },
+    keydown: function(a) {
+      if (a.which == 13) {
+        //jQuery.event.trigger({ type : 'keypress', which : 13 });
+        var command = term.get_command();
+        var d = new Date();
+        var n = d.getUTCDate();
+        //Set the previous prompt per current exec
+        if (command !== '') {
+          prompter(command);
+          var p = getPrompt();
+          console.log(p);
+          if (p == "<span>Listeners&gt;</span>") {
+            var ret = configListener(command);
+            term.echo(ret);
+          } else if (p == "<span>PRISM&gt;</span>" || p == "") {
+            if (command == 'test') {
+              jQuery.event.trigger({ type : 'keypress', which : 13 });
+              setTimeout(function() {
+                  term.echo(String("test"));
+              }, 10);
+              //PROMPT Checks
+            } else if (command.startsWith('eval')) {
+              var result = window.eval(command.slice(5));
+                if (result != undefined) {
+                    this.echo(String(result));
+                }
+            } else if (command.startsWith('task')) {
+              var result = command.slice(5);
+                if (result != undefined) {
+                  $.post("http://10.0.0.134:29001/api/task", {"agentid": "1", "datetime": n, "cmd": result}).then(function(response) {
+                      setTimeout(function(){term.echo(response)}, 100);
+                  });
+                }
+            } else if (command.startsWith('task')) {
+              var result = command.slice(5);
+                if (result != undefined) {
+                  $.post("http://10.0.0.134:29001/task", {"agentid": "1", "datetime": n, "cmd": result}).then(function(response) {
+                      setTimeout(function(){term.echo(response)}, 100);
+                  });
+                }
+            } else if (command == "shell") {
+              //Create new shell tab
+              term.echo("Connecting to local TTY instance...");
+              setPrompt("C:\\> ");
+
+            } else if (command == "listeners" || command == "Listeners") {
+              setPrompt("Listeners>");
+              this.echo('\“The quieter you become, the more you can hear.\”');
+
+            } else if (command == "prism" || command == "exit") {
+              //Create new shell tab
+              term.echo("Getting PRISM Shell");
+              setPrompt("PRISM>");
+
+            } else if (command.startsWith('shell')) {
+              var result = command.slice(5);
+                if (result != undefined) {
+                  $.post("http://localhost:8010/shell", {"sid": "local", "cmd": result}).then(function(response) {
+                      setTimeout(function(){term.echo(response)}, 1000);
+                  });
+                }
+            }
+
+
+
+            else {
+                $.post("prism-shell/" + command + '.json', {"a": "command"}).then(function(response) {
+                    setTimeout(function(){term.echo(response)}, 10);
+                });
+            }
+          }
+        }
+      adjustPrompt(command);
+      //if (document.getElementsByClassName("command").length > 0) {
+      //  document.getElementsByClassName("command")[document.getElementsByClassName("command").length-1].innerHTML = '';
+      //}
+      }
+    },
+    greetings: 'PRISMatic Interpreter',
+    name: 'PRISM Terminal',
+    height: $( window ).height() - 50,
+    width: $( window ).width() - 50,
+    prompt: 'PRISM>',
+    onBlur: function() {
+        return false;
+    },
+});
+</script>
+    <style>
+      .term_container {
+        position: absolute;
+
+      }
+      .terminal {
+        color: yellow;
+        background-color: black;
+      }
+      @keyframes blink {
+          50% {
+              color: #000;
+              background: #0c0;
+              -webkit-box-shadow: 0 0 5px rgba(0,100,0,50);
+              box-shadow: 0 0 5px rgba(0,100,0,50);
+          }
+      }
+      @-webkit-keyframes blink {
+          50% {
+              color: #000;
+              background: #0c0;
+              -webkit-box-shadow: 0 0 5px rgba(0,100,0,50);
+              box-shadow: 0 0 5px rgba(0,100,0,50);
+          }
+      }
+      @-ms-keyframes blink {
+          50% {
+              color: #000;
+              background: #0c0;
+              -webkit-box-shadow: 0 0 5px rgba(0,100,0,50);
+              box-shadow: 0 0 5px rgba(0,100,0,50);
+          }
+      }
+      @-moz-keyframes blink {
+          50% {
+              color: #000;
+              background: #0c0;
+              -webkit-box-shadow: 0 0 5px rgba(0,100,0,50);
+              box-shadow: 0 0 5px rgba(0,100,0,50);
+          }
+      }
+      .terminal {
+          --background: #000;
+          --color: #0c0;
+          text-shadow: 0 0 3px rgba(0,100,0,50);
+      }
+      .cmd .cursor.blink {
+          -webkit-animation: 2s blink infinite;
+          animation: 2s blink infinite;
+          -webkit-box-shadow: 0 0 0 rgba(0,100,0,50);
+          box-shadow: 0 0 0 rgba(0,100,0,50);
+          border: none;
+          margin: 0;
+      }
+    </style>
+  </body>
+</html>
